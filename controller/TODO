@@ -1,0 +1,110 @@
+====Opção 1: Comunicação com o mundo real====
+HTTP	CRUD
+GET	Retrieve
+POST	Create
+PUT	Update
+DELETE	Delete
+
+#POST /lamp {id:"1", state:"off"}
+#	return 201 Created
+#DELETE /lamp/1
+#GET /lamp/1 
+#	return 200 OK, {id:"1", state:"off"}
+
+PUT /lamp {state:"on"}
+	return 200 OK
+		OU
+	return 403 Forbidden
+
+/app {"input1":0, "input2":0, "input3":1,...}
+
+Alternativa MQTT
+tópico /lamp
+tópico /control_lamp
+
+Passos:
+=> Definir nova interface MQTT conforme esquema acima
+=> Traduzir chamadas das coisas em chamadas do modelo
+	"""Coisas enviam eventos, mas o modelo precisa de todas
+	as entradas"""
+=> Implementar com Raspberry ou Arduino algumas coisas
+=> Implementar MQTT nas coisas
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+====Opção 2: Adicionando novos dispositivos====
+
+Entrada seria um node do ept
+Teria que pensar em como modificar as regras para acomodar dispositivos novos (sugestão autômatos de grupos)
+
+Passos:
+=> reescrever todas as regras com grupos
+=> entrada do node ept+informações de grupo via interface
+=> modificar interface de simulador
+=> modificar o ept com novo node
+=> modificar node global e node de grupo
+=> compilar (processo normal)
+=> cópia da interface rest
+=> recompilar
+=> colocar no ar
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+====Opção 3: Adicionando regras novas====
+If 
+	{Sala.Ocupada} ou e
+	{}
+then 
+	{tv.on} ou e
+	{lamp.on}
+
+Passos:
+=> Alterar interface conforme esquema acima
+=> modificar o ept com nova regra
+=> compilar (processo normal)
+=> cópia da interface rest
+=> recompilar
+=> colocar no ar
+
+++++++++++++++++++++++++++++++++++++++++++++++++++++
+====Opção 4: Novo cenário====
+Repetir todo o processo de modelagem em um novo cenário
+Sugestões: 
+	* Uma casa com mais cômodos
+	* O CEAGRI-2
+	* Um prédio de escritórios
+
+Prédio
+	Geral
+		controle do ar condicionado (liga/desliga, define temperatura mínima por temperatura corporal média, não controla temperatura)
+		controle de iluminação (por disposição das pessoas)
+		controle dos computadores (desliga ou suspende com base na presença)
+		sensor de presença
+		emergência (abre portas e janelas acende luzes de emergência, baseado em sensor de fumaça)
+	
+	laboratórios para uso dos alunos
+		segurança na entrada da sala
+		trava quando atingir o limite de pessoas e só permite saída
+		
+	laboratórios para aula
+		segurança na entrada da sala
+		entrada e saída baseada na reserva
+		não trava enquanto tem gente na sala (safety)
+		
+	coordenação/secretaria (atende gente)
+		limitar entrada de pessoas baseada na carga de trabalho do atendente
+		
+	sala de aula
+		
+	corredor
+	banheiros
+	auditório
+		datashow (liga/desliga)
+	
+	recepção
+	copa
+		máquina de café (número de professores)
+	hall
+	sala de estudo (individual)
+		trava quando atingir o limite de pessoas e só permite saída
+	elevador
+	sala de professor
+		<não conseguimos identificar nada>
