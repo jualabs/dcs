@@ -1,0 +1,113 @@
+node fail(fc,rc: bool) returns (f:bool)
+let
+    automaton
+      state Funcionando do
+        f = false;
+      unless fc then Falha
+      state Falha do
+        f = true;
+      unless rc then Funcionando
+    end
+tel
+
+node frequency(u1, u2, u3, d1, d2, d3: bool) returns (s,l1,l2,l3:bool)
+ let
+    automaton
+      state NC do
+        s = false; l1 = false; l2 = false; l3 = false;
+      unless u1 then L1 |
+             u2 then L2 |
+             u3 then L3 
+      state L1 do
+        s = true; l1 = true; l2 = false; l3 = false;
+      unless u1 then L2 |
+             u2 then L3 |
+             d1 then NC 
+      state L2 do
+         s = true; l1 = false; l2 = true; l3 = false;
+      unless u1 then L3 |
+             d1 then L1 |
+             d2 then NC 
+      state L3 do
+         s = true; l1 = false; l2 = false; l3 = true;
+      unless d1 then L2 |
+             d2 then L1 |
+             d3 then NC 
+    end
+tel
+
+node station(ce : bool) returns (e:bool)
+let
+    automaton
+      state Ligado do
+        e = true
+      unless ce then Desligado
+      state Desligado do
+        e = false;
+      unless not ce then Ligado
+    end
+tel
+
+node stationsystem(c_e_t_u1,c_e_t_u2,c_e_t_u3,c_e_t_d1,c_e_t_d2,c_e_t_d3,c_e_h_u1,c_e_h_u2,c_e_h_u3,c_e_h_d1,c_e_h_d2,c_e_h_d3,c_e,e_t_fc,e_t_rc,e_h_fc,e_h_rc,e_fc,e_rc:bool) 
+returns (e_s,e_t_s,e_h_s,e_t_l1,e_t_l2, e_t_l3, e_h_l1, e_h_l2, e_h_l3, e_t_f, e_h_f, e_f:bool)
+var
+    aux1, aux2, aux3, aux4: bool;
+let
+    (e_t_s,e_t_l1,e_t_l2,e_t_l3) = inlined frequency(c_e_t_u1,c_e_t_u2,c_e_t_u3,c_e_t_d1,c_e_t_d2,c_e_t_d3);
+    (e_h_s,e_h_l1,e_h_l2, e_h_l3) = inlined frequency(c_e_h_u1,c_e_h_u2,c_e_h_u3,c_e_h_d1,c_e_h_d2,c_e_h_d3);
+    e_s = inlined station(c_e);
+    e_f = inlined fail(e_fc,e_rc);
+    aux1 = e_t_fc or e_f;
+    aux2 = e_h_fc or e_f;
+    aux3 = e_t_rc or e_rc;
+    aux4 = e_h_rc or e_rc;
+    e_t_f = inlined fail(aux1,aux3); 
+    e_h_f = inlined fail(aux2,aux4);
+tel
+            
+node global(uth,utm,utl,uhh,uhm,uhl,e1_t_fc,e1_t_rc,e1_h_fc,e1_h_rc,e2_t_fc,e2_t_rc,e2_h_fc,e2_h_rc,e1_fc,e1_rc,e2_fc,e2_rc: bool) 
+returns (e1_t_s, e1_t_f, e1_t_l1, e1_t_l2, e1_t_l3, e1_h_s, e1_h_f, e1_h_l1, e1_h_l2, e1_h_l3, e1_f, e1_s, 
+         e2_t_s, e2_t_f, e2_t_l1, e2_t_l2, e2_t_l3, e2_h_s, e2_h_f, e2_h_l1, e2_h_l2, e2_h_l3, e2_f, e2_s: bool)
+    contract 
+     var
+        r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16, r17, r18, r19: bool;
+     let
+        (*Estação 1 deve ficar desligada quando sensores estão sem uso, e ligada quando pelo menos um está em uso.*)
+        r0 = not (not e1_t_s & not e1_h_s) or (not e1_s);
+        r12 = not ((e1_t_s or e1_h_s) & (not e1_f)) or (e1_s);
+        
+        (*Estação 2 deve ficar desligada quando todos os sensores estão sem uso, e ligada quando pelo menos um está em uso.*)
+        r6 = not(not e2_t_s & not e2_h_s) or (not e2_s);
+        r13 = not((e2_t_s or e2_h_s) & (not e2_f)) or (e2_s);
+
+        (*Ajuste do uso e frequência dos sensores de temperatura da Estação 1 e 2 conforme o requisito dos usuários.*)
+        r1 = not ((uth or utm or utl) & (not (e1_t_f & e2_t_f)) & (not (e1_f & e2_f))) or ((e1_t_s & not e2_t_s) or (not e1_t_s & e2_t_s));
+        r2 = not ((not uth & not utm & not utl) & (not (e1_t_f & e2_t_f)) & (not (e1_f & e2_f))) or (not e1_t_s & not e2_t_s);
+        r3 = not ((uth & not utm & not utl) & (not (e1_t_f & e2_t_f)) & (not (e1_f & e2_f))) or ((e1_t_l3 or e2_t_l3));
+        r4 = not ((not uth & utm & not utl) & (not (e1_t_f & e2_t_f)) & (not (e1_f & e2_f))) or ((e1_t_l2 or e2_t_l2));
+        r5 = not ((not uth & not utm & utl) & (not (e1_t_f & e2_t_f)) & (not (e1_f & e2_f))) or ((e1_t_l1 or e2_t_l1));
+        
+        (*Ajuste do uso e frequência dos sensores de humidade da Estação 1 e 2 conforme o requisito dos usuários.*)
+        r7 = not ((uhh or uhm or uhl) & (not(e1_h_f & e2_h_f)) & (not (e1_f & e2_f))) or ((e1_h_s & not e2_h_s) or (not e1_h_s & e2_h_s));
+        r8 = not ((not uhh & not uhm & not uhl) & (not (e1_h_f & e2_h_f)) & (not (e1_f & e2_f))) or (not e1_h_s & not e2_h_s);
+        r9 = not ((uhh & not uhm & not uhl) & (not(e1_h_f & e2_h_f)) & (not (e1_f & e2_f))) or ((e1_h_l3 or e2_h_l3));
+        r10= not ((not uhh & uhm & not uhl) & (not(e1_h_f & e2_h_f)) & (not (e1_f & e2_f))) or ((e1_h_l2 or e2_h_l2));
+        r11= not ((not uhh & not uhm & uhl) & (not(e1_h_f & e2_h_f)) & (not (e1_f & e2_f))) or ((e1_h_l1 or e2_h_l1));
+        
+        r14 = not (e1_t_f) or (not e1_t_s);
+        r15 = not (e2_t_f) or (not e2_t_s);
+        r16 = not (e1_h_f) or (not e1_h_s);
+        r17 = not (e2_h_f) or (not e2_h_s);
+    
+        r18  = not (e1_f) or (not e1_s);
+        r19  = not (e2_f) or (not e2_s);
+        
+      
+     tel
+     enforce r0 & r1 & r2 & r3 & r4 & r5 & r6 & r7 & r8 & r9 & r10 & r11 & r12 & r13 & r14 & r15 & r16 & r17 & r18 & r19
+     with (c_e1,c_e1_t_u1,c_e1_t_u2,c_e1_t_u3,c_e1_t_d1,c_e1_t_d2,c_e1_t_d3,c_e1_h_u1,c_e1_h_u2,c_e1_h_u3,c_e1_h_d1,c_e1_h_d2,c_e1_h_d3,
+           c_e2,c_e2_t_u1,c_e2_t_u2,c_e2_t_u3,c_e2_t_d1,c_e2_t_d2,c_e2_t_d3,c_e2_h_u1,c_e2_h_u2,c_e2_h_u3,c_e2_h_d1,c_e2_h_d2,c_e2_h_d3:bool)
+let
+    (e1_s, e1_t_s, e1_h_s, e1_t_l1, e1_t_l2, e1_t_l3, e1_h_l1, e1_h_l2, e1_h_l3, e1_t_f, e1_h_f, e1_f) = inlined stationsystem(c_e1_t_u1,c_e1_t_u2,c_e1_t_u3,c_e1_t_d1,c_e1_t_d2,c_e1_t_d3,c_e1_h_u1,c_e1_h_u2,c_e1_h_u3,c_e1_h_d1,c_e1_h_d2,c_e1_h_d3,c_e1,e1_t_fc,e1_t_rc,e1_h_fc,e1_h_rc,e1_fc,e1_rc);
+    (e2_s, e2_t_s, e2_h_s, e2_t_l1, e2_t_l2, e2_t_l3, e2_h_l1, e2_h_l2, e2_h_l3, e2_t_f, e2_h_f, e2_f) = inlined stationsystem(c_e2_t_u1,c_e2_t_u2,c_e2_t_u3,c_e2_t_d1,c_e2_t_d2,c_e2_t_d3,c_e2_h_u1,c_e2_h_u2,c_e2_h_u3,c_e2_h_d1,c_e2_h_d2,c_e2_h_d3,c_e2,e2_t_fc,e2_t_rc,e2_h_fc,e2_h_rc,e2_fc,e2_rc);
+tel                                                                          
