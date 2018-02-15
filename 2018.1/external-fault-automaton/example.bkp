@@ -1,0 +1,45 @@
+node failure(failed, recover : bool) returns (f : bool)
+let
+  automaton
+    state Funcionando do
+      f = false;
+      unless failed then Falha
+    state Falha do
+      f = true;
+      unless recover then Funcionando
+  end
+tel
+
+node lightBulb ( onn, off, c1, c2 : bool ) returns (light : bool )
+let
+  automaton
+    state Off do
+      light = false;
+      unless (onn & c2) or not c1 then On
+    state On do
+      light = true;
+      unless (off & c1) or not c2 then Off
+  end
+tel
+
+node bulbSystem(onn, off, c1, c2, fail, recovery : bool) returns(light, failed : bool)
+let
+  light = inlined lightBulb (onn, off, c1, c2);
+  failed = inlined failure(fail, recovery);	
+tel
+
+node controller ( on1, on2, off1, off2, fail1, fail2, recovery1, recovery2 : bool ) returns ( failed1, failed2, light1, light2 : bool)
+contract
+  var
+    regra0, regra1: bool;
+  let
+    regra0 = not failed1 or not light1;
+	regra1 = not failed2 or not light2;
+  tel
+
+  enforce regra0 & regra1
+    with (c11, c12, c21, c22 : bool)
+let
+	(light1, failed1) = inlined bulbSystem (on1, off1, c11, c12, fail1, recovery1);
+	(light2, failed2) = inlined bulbSystem (on2, off2, c22, c22, fail2, recovery2);
+tel	
