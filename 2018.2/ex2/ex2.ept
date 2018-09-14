@@ -1,0 +1,30 @@
+(*
+    until => executa o estado em que está e transiciona para outro estado
+    unless => transiciona para outro estado e executa o novo estado
+*)
+
+node delayable(r,c,e: bool) returns (a:bool)
+let
+    automaton
+     state Idle do
+        a = false; 
+     unless r & c then Active
+        | r & not c then Wait
+     state Wait do
+        a = false;
+     unless c then Active
+        | e then Idle
+     state Active do
+        a = true;
+     unless e then Idle
+    end 
+tel
+
+node twotasks(r1,e1,r2,e2: bool) returns (a1,a2: bool)
+    contract
+     enforce not (a1 & a2)
+     with (c2, c1:bool)
+let
+    a1 = inlined delayable(r1,c1,e1);
+    a2 = inlined delayable(r2,c2,e2)
+tel
