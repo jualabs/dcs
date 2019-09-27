@@ -1,1 +1,1 @@
-# Repositorio de documentos da disciplina de controle supervisorio
+# Code of my course on discrete control synthesis
