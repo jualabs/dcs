@@ -70,6 +70,4 @@ clean:
 	rm -f *.epci *.mls *.ml *.obc ./*~
 	rm -f $(CTRLR_PROG).ept
 
-# Dependences
-
 $(HEPT_OBJS) $(SIM_PROG)_c/_main.o: $(CTRLR_C_FILES)
