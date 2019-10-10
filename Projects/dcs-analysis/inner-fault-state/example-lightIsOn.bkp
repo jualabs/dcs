@@ -1,0 +1,29 @@
+node lightBulb (onnnn, off ,c , lightIsOn : bool ) returns (failed, light : bool )
+let
+  automaton
+    state Off do
+      failed = false ;
+      light = false ;
+      unless (onnnn & lightIsOn) or c then On | onnnn & not lightIsOn then Fail    
+
+    state On do
+      failed = false ;
+      light = true ;
+      unless off & c & not lightIsOn then Off | not lightIsOn & not off then Fail
+
+    state Fail do
+      failed = true ;
+      light = false ;
+      unless lightIsOn then On
+  end
+tel
+
+node controller ( on1, off1 , on2, off2 , problem , lightIsOn1, lightIsOn2 : bool ) returns ( fail1 , fail2, light1, light2 : bool )
+  contract
+  	assume not (fail1 & fail2)
+    enforce not problem or light1 or light2
+    with(c1,c2 : bool)
+let
+  (fail1,light1) = inlined lightBulb ( on1, off1 , c1 , lightIsOn1 );
+  (fail2,light2) = inlined lightBulb ( on2, off2 , c2 , lightIsOn2 );
+tel
