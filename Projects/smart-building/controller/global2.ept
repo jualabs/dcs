@@ -1,0 +1,181 @@
+node ac(user,c1,c2:bool) returns(status:bool)
+let
+    automaton
+        state OFF
+            do status=false;
+            unless c1 or (user & c2) then ON
+        state ON
+            do status=true;
+            unless not c1 or (user & c2) then OFF
+    end
+tel
+
+node computer(switchon,switchoff,c1,c2,c3:bool) returns(off,inuse,susp:bool)
+let
+    automaton
+        state OFF
+            do off=true; inuse=false; susp=false;
+            unless (switchon & c1) then INUSE
+        
+        state INUSE
+            do off=false; inuse=true; susp=false;
+            unless not c2 then SUSPENDED |
+            (switchoff or not c1) then OFF
+            
+        state SUSPENDED
+            do off=false; inuse=false; susp=true;
+            unless (switchon & c2) then INUSE |
+            not c3 then OFF
+    end
+tel
+
+node lamp(c1:bool) returns(lamp_on:bool)
+let
+    automaton
+        state OFF
+            do lamp_on=false;
+            unless c1 then ON
+        
+        state ON
+            do lamp_on=true;
+            unless not c1 then OFF
+    end
+tel
+    
+node shutter(c1:bool) returns(opened:bool)
+let
+    automaton
+        state CLOSED
+            do opened=false;
+            unless c1 then OPENED
+            
+        state OPENED
+            do opened=true;
+            unless not c1 then CLOSED
+    end
+tel
+
+node lighting_police(up1,up2,down1,down2,c1:bool) returns(dark,lit,well_lit:bool)
+let
+    automaton
+        state DARK
+            do dark=true;lit=false;well_lit=false;
+            unless (up1 & c1) then LIT |
+            (up2 & c1) then WELL_LIT
+        
+        state LIT
+            do dark=false;lit=true;well_lit=false;
+            unless (up1 & c1) then WELL_LIT |
+            (down1 or not c1) then DARK
+            
+        state WELL_LIT
+            do dark=false;lit=false;well_lit=true;
+            unless (down1 & c1) then LIT |
+            (down2 or not c1) then DARK
+    end
+tel
+
+node global(emergency,daybreak,warm,presence_students,presence_class,presence_hall,presence_wc,ac1_onoff_students,ac2_onoff_students,ac1_onoff_class,ac2_onoff_class,ac1_onoff_hall,ac2_onoff_hall,lp_up1_students,lp_up2_students,lp_down1_students,lp_down2_students,lp_up1_class,lp_up2_class,lp_down1_class,lp_down2_class,lp_up1_hall,lp_up2_hall,lp_down1_hall,lp_down2_hall,comp1_sw_on_students,comp1_sw_off_students,comp1_sw_on_class,comp1_sw_off_class: bool) returns(ac1_status_students, ac2_status_students, ac1_status_class, ac2_status_class, ac1_status_hall, ac2_status_hall, lamp_on_students, lamp_on_class, lamp_on_hall, lamp_on_wc, shutter_opened_students, shutter_opened_class, shutter_opened_hall, lp_dark_students, lp_lit_students, lp_well_lit_students, lp_dark_hall, lp_lit_hall, lp_well_lit_hall, lp_dark_class, lp_lit_class, lp_well_lit_class,comp1_off_students,comp1_inuse_students,comp1_susp_students,comp1_off_class,comp1_inuse_class,comp1_susp_class: bool)
+    contract
+        var computer1_students,comp1_eco1_students,comp1_eco2_students,comp1_safety_students,computer1_class,comp1_eco1_class,comp1_eco2_class,comp1_safety_class,ac_eco1_students, ac_eco2_students, ac_comfort_students, ac_eco1_class, ac_eco2_class, ac_comfort_class, ac_eco1_hall, ac_eco2_hall, ac_comfort_hall, students_room, class_room, hall_room,lp_dark_rule_students,lp_lit_rule_students,lp_well_lit_rule_students,lp_eco_students,lp_safety_students,lp_security_students, wc_room, lp_eco_wc,lp_safety_wc,lp_dark_rule_class,lp_lit_rule_class,lp_well_lit_rule_class,lp_eco_class,lp_safety_class,lp_security_class,lp_eco_hall, lp_safety_hall, lp_security_hall, lp_dark_rule_hall, lp_lit_rule_hall, lp_well_lit_rule_hall:bool;
+        let
+            (*STUDENT'S ROOM - Corresponds to lab that allow access to students during all day*)
+            
+            (*air conditioner rules of students room*)
+            ac_eco1_students = not (not presence_students or emergency or daybreak) or (not ac1_status_students) & (not ac2_status_students);
+            ac_eco2_students = not (presence_students & not warm & not emergency & not daybreak) or ((not(ac1_status_students & ac2_status_students))&(ac1_status_students or ac2_status_students));
+            ac_comfort_students = not (presence_students & warm & not emergency & not daybreak) or (ac1_status_students or ac2_status_students);
+            
+            (*computer rules of students room*)
+            comp1_eco1_students = not (not presence_students) or not comp1_inuse_students;
+            comp1_eco2_students = not (daybreak & not comp1_inuse_students) or comp1_off_students;
+            comp1_safety_students = not (emergency) or comp1_off_students;
+            computer1_students = comp1_eco1_students & comp1_eco2_students & comp1_safety_students;
+            
+            (*lighting_police rules of students_room*)
+            lp_dark_rule_students = not (lp_dark_students & not emergency) or (not lamp_on_students & not shutter_opened_students);
+            lp_lit_rule_students = not lp_lit_students or (not lamp_on_students & shutter_opened_students);
+            lp_well_lit_rule_students = not lp_well_lit_students or (lamp_on_students & shutter_opened_students);
+            lp_eco_students =presence_students or lp_dark_students;
+            lp_safety_students = not (emergency) or (not lamp_on_students & shutter_opened_students);
+            lp_security_students = not (daybreak & not emergency) or (not lamp_on_students & not shutter_opened_students);
+            
+            (*Main rule of students_room*)
+            students_room = computer1_students & ac_eco1_students & ac_eco2_students & ac_comfort_students & lp_eco_students & lp_safety_students & lp_security_students & lp_dark_rule_students & lp_lit_rule_students & lp_well_lit_rule_students;
+
+
+            (*CLASS ROOM - *)
+            
+            (*air conditioner rules of class lab*)
+            ac_eco1_class = not (not presence_class or emergency or daybreak) or (not ac1_status_class) & (not ac2_status_class);
+            ac_eco2_class = not (presence_class & not warm & not emergency & not daybreak) or ((not(ac1_status_class & ac2_status_class))&(ac1_status_class or ac2_status_class));
+            ac_comfort_class = not (presence_class & warm & not emergency & not daybreak) or (ac1_status_class or ac2_status_class);
+            
+            (*computer rules of class room*)
+            comp1_eco1_class = not (not presence_class) or not comp1_inuse_class;
+            comp1_eco2_class = not (daybreak & not comp1_inuse_class) or comp1_off_class;
+            comp1_safety_class = not (emergency) or comp1_off_class;
+            computer1_class = comp1_eco1_class & comp1_eco2_class & comp1_safety_class;
+            
+           
+            (*lighting police rules of class lab *)
+            lp_dark_rule_class = not (lp_dark_class & not emergency) or (not lamp_on_class & not shutter_opened_class);
+            lp_lit_rule_class = not lp_lit_class or (not lamp_on_class & shutter_opened_class);
+            lp_well_lit_rule_class = not lp_well_lit_class or (lamp_on_class & shutter_opened_class);
+            lp_eco_class =presence_class or lp_dark_class;
+            lp_safety_class = not (emergency) or (not lamp_on_class & shutter_opened_class);
+            lp_security_class = not (daybreak & not emergency) or (not lamp_on_class & not shutter_opened_class);
+            
+            (*Main rule of class_room*)
+            class_room = computer1_class & ac_eco1_class & ac_eco2_class & ac_comfort_class & lp_eco_class & lp_safety_class & lp_security_class & lp_dark_rule_class & lp_lit_rule_class & lp_well_lit_rule_class;
+            
+            (*HALL*)
+            (*air conditioner rules of Hall*)
+            ac_eco1_hall = not ( not presence_hall or emergency or daybreak) or (not ac1_status_hall) & (not ac2_status_hall);
+            ac_eco2_hall = not (presence_hall & not warm & not emergency & not daybreak ) or ((not(ac1_status_hall & ac2_status_hall))&(ac1_status_hall or ac2_status_hall));
+            ac_comfort_hall = not (presence_hall & warm & not emergency & not daybreak) or (ac1_status_hall or ac2_status_hall);
+            
+            (*lighting_police rules of hall*)
+            lp_dark_rule_hall = not (lp_dark_hall & not emergency) or (not lamp_on_hall & not shutter_opened_hall);
+            lp_lit_rule_hall = not lp_lit_hall or (not lamp_on_hall & shutter_opened_hall);
+            lp_well_lit_rule_hall = not lp_well_lit_hall or (lamp_on_hall & shutter_opened_hall);
+            lp_eco_hall =presence_hall or lp_dark_hall;
+            lp_safety_hall = not (emergency) or (not lamp_on_hall & shutter_opened_hall);
+            lp_security_hall = not (daybreak & not emergency) or (not lamp_on_hall & not shutter_opened_hall);
+            
+            (*Main rules of hall room*)
+            hall_room = ac_eco1_hall & ac_eco2_hall & ac_comfort_hall & lp_eco_hall & lp_safety_hall & lp_security_hall & lp_dark_rule_hall & lp_lit_rule_hall & lp_well_lit_rule_hall;
+           
+            (*WC*)
+            (*Lighting police of wc_room. This police is different from others, working in a more simple manner*)
+            lp_eco_wc = not (not presence_wc or emergency or daybreak) or not lamp_on_wc;
+            lp_safety_wc = not (presence_wc & not emergency & not daybreak) or lamp_on_wc;
+            wc_room = lp_eco_wc & lp_safety_wc;
+           
+            
+        tel
+        enforce students_room & class_room & hall_room & wc_room
+        with(c1_ws_wc,c2_ws_wc,c1_ac1_students,c2_ac1_students,c1_ac2_students,c2_ac2_students,c1_ac1_class,c2_ac1_class,c1_ac2_class,c2_ac2_class,c1_ac1_hall,c2_ac1_hall,c1_ac2_hall,c2_ac2_hall,c1_lamp_students,c1_shutter_students,c1_lp_students,c1_lamp_class,c1_shutter_class,c1_lp_class,c1_lamp_hall,c1_shutter_hall,c1_lp_hall,c1_lamp_wc,comp1_c1_students,comp1_c2_students,comp1_c3_students,comp1_c1_class,comp1_c2_class,comp1_c3_class:bool)
+let
+    ac1_status_students = inlined ac(ac1_onoff_students,c1_ac1_students,c2_ac1_students);
+    ac2_status_students = inlined ac(ac2_onoff_students,c1_ac2_students,c2_ac2_students);
+    (comp1_off_students,comp1_inuse_students,comp1_susp_students) = inlined computer(comp1_sw_on_students,comp1_sw_off_students,comp1_c1_students,comp1_c2_students,comp1_c3_students);
+    lamp_on_students = inlined lamp(c1_lamp_students);
+    shutter_opened_students = inlined shutter(c1_shutter_students);
+    (lp_dark_students,lp_lit_students,lp_well_lit_students) = inlined lighting_police(lp_up1_students,lp_up2_students,lp_down1_students,lp_down2_students,c1_lp_students);
+    
+    ac1_status_class = inlined ac(ac1_onoff_class,c1_ac1_class,c2_ac1_class);
+    ac2_status_class = inlined ac(ac2_onoff_class,c1_ac2_class,c2_ac2_class);
+    (comp1_off_class,comp1_inuse_class,comp1_susp_class) = inlined computer(comp1_sw_on_class,comp1_sw_off_class,comp1_c1_class,comp1_c2_class,comp1_c3_class);
+    lamp_on_class = inlined lamp(c1_lamp_class);
+    shutter_opened_class = inlined shutter(c1_shutter_class);
+    (lp_dark_class,lp_lit_class,lp_well_lit_class) = inlined lighting_police(lp_up1_class,lp_up2_class,lp_down1_class,lp_down2_class,c1_lp_class);
+    
+    ac1_status_hall = inlined ac(ac1_onoff_hall,c1_ac1_hall,c2_ac1_hall);
+    ac2_status_hall = inlined ac(ac2_onoff_hall,c1_ac2_hall,c2_ac2_hall);
+    lamp_on_hall = inlined lamp(c1_lamp_hall);
+    shutter_opened_hall = inlined shutter(c1_shutter_hall);
+    (lp_dark_hall,lp_lit_hall,lp_well_lit_hall) = inlined lighting_police(lp_up1_hall,lp_up2_hall,lp_down1_hall,lp_down2_hall,c1_lp_hall);
+    
+    lamp_on_wc = inlined lamp(c1_lamp_wc);
+tel

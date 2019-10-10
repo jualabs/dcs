@@ -1,0 +1,25 @@
+node water_supply(turn,c1,c2:bool) returns(watersupply_wc:bool)
+let
+    automaton
+        state OPEN
+            do watersupply_wc=true;
+            unless (turn & c2) or not c1 then CLOSE
+        
+        state CLOSE
+            do watersupply_wc=false;
+            unless (turn & c1) or not c2 then OPEN 
+    end
+tel
+
+node global(leak_wc,emergency,turn:bool) returns(watersupply_wc:bool)
+    contract
+        var safety,eco: bool;
+        let
+            safety = not(emergency) or watersupply_wc;
+            eco = not (not emergency & leak_wc) or not watersupply_wc;
+        tel
+        enforce safety & eco
+        with(c1,c2:bool)
+let
+    watersupply_wc = inlined water_supply(turn,c1,c2);
+tel
